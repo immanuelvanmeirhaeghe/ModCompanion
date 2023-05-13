@@ -16,9 +16,9 @@ namespace ModCompanion.Managers
         private static InstructionsManager Instance;
         private static readonly string ModuleName = nameof(InstructionsManager);
 
-        public readonly string NpcInitUrl = "https://localhost:7230/npc/init?npcName=";
-        public readonly string NpcInstructionUrl = "https://localhost:7230/npc/instruction?npcName=";
-        public readonly string NpcPromptUrl = "https://localhost:7230/npc/prompt?scribe=true&gpt=true&question=";
+        public readonly string NpcInitUrl = $"https://localhost:7230/npc/init?gameName=GreenHell";
+        public readonly string NpcInstructionUrl = $"https://localhost:7230/npc/instruction?gameName=GreenHell";
+        public readonly string NpcPromptUrl = $"https://localhost:7230/npc/prompt?gameName=GreenHell&scribe=true&gpt=true";
 
         public string NpcInitUrlToPost { get; set; } = string.Empty;
         public string SystemInstructions { get; set; } = string.Empty;

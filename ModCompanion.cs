@@ -456,16 +456,7 @@ namespace ModCompanion
             if (!IsNpcInitialized)
             {
                 NpcName = NpcName.Replace($"(Clone)", string.Empty);
-                LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
-                LocalInstructionsManager.NpcInitUrlToPost = LocalInstructionsManager.NpcInitUrl + NpcName;
-
-                string instructionDownLoadPath = $" {nameof(LocalInstructionsManager.InstructionDownloadPath)}: {LocalInstructionsManager.InstructionDownloadPath}";
-                ModAPI.Log.Write(instructionDownLoadPath);
-                ShowHUDBigInfo(instructionDownLoadPath);
-
-                PostData = $"{{ \"fromSystem\": \"{LocalInstruction.FromSystem}\", \"fromUser\": \"{LocalInstruction.FromUser}\" }}";
-                ModAPI.Log.Write(PostData);
-                ShowHUDBigInfo(PostData);
+                LocalInstructionsManager.NpcInitUrlToPost = $"{LocalInstructionsManager.NpcInitUrl}&gameName=GreenHell&npcName={NpcName}";
                 StartCoroutine(PostInitNpcMessage());
             }
         }
@@ -484,7 +475,7 @@ namespace ModCompanion
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                string errorMsg = $"NPC not initialized!\nError for POST {LocalInstructionsManager.NpcInitUrlToPost} with {PostData}\n{www.error}";
+                string errorMsg = $"Could not initialize NPC!\nError for POST {LocalInstructionsManager.NpcInitUrlToPost} with {PostData}\n{www.error}";
                 ModAPI.Log.Write(errorMsg);
                 IsNpcInitialized = false;
                 ShowHUDBigInfo(errorMsg);
@@ -498,7 +489,7 @@ namespace ModCompanion
 
         protected virtual IEnumerator GetAnswer()
         {
-            string url = LocalInstructionsManager.NpcPromptUrl + Question;
+            string url = $"{LocalInstructionsManager.NpcPromptUrl}&question={Question}&npcName={NpcName}";
             UnityWebRequest www = UnityWebRequest.Get(url);
             yield return www.SendWebRequest();
 
