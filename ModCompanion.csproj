@@ -23,7 +23,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Data\Instruction.cs" />
     <Compile Include="Extensions\PlayerExtended.cs" />
+    <Compile Include="Managers\InstructionsManager.cs" />
+    <Compile Include="Managers\InstructionsManagerHelpers.cs" />
     <Compile Include="ModCompanion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -329,6 +332,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Data\SystemInstructions.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Data\UserInstructions.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

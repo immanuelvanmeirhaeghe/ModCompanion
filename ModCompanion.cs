@@ -10,21 +10,27 @@ using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Collections;
 using ModManager.Data.Enums;
+using ModCompanion.Managers;
+using ModCompanion.Data;
+using System.Threading.Tasks;
 
 namespace ModCompanion
 {
 
     public class ModCompanion : MonoBehaviour
     {
+        private const string ErrorMessage = "Something went wrong!\nThe answer was empty, sorry ;p";
         private static ModCompanion Instance;
         private static readonly string ModName = nameof(ModCompanion);
         private static readonly string RuntimeConfiguration = Path.Combine(Application.dataPath.Replace("GH_Data", "Mods"), $"{nameof(RuntimeConfiguration)}.xml");
 
+        private static InstructionsManager LocalInstructionsManager;
         private static HUDManager LocalHUDManager;
         private static CursorManager LocalCursorManager;
-        private static Player LocalPlayer;
-       
+        private static Player LocalPlayer;       
         private static AIManager LocalAIManager;
+
+        public Instruction LocalInstruction { get; set; } = null;
 
         private static float ModCompanionScreenTotalWidth { get; set; } = 500f;
         private static float ModCompanionScreenTotalHeight { get; set; } = 150f;
@@ -190,14 +196,28 @@ namespace ModCompanion
                         GUILayout.Label($"{ModName} Manager", GUI.skin.label);
                         GUILayout.Label($"{ModName} Options", GUI.skin.label);
 
-                        GUILayout.Label($"Start with creating your companion. For the moment, this should be a spearman.", GUI.skin.label);
+                        GUILayout.Label($"Start with creating your companion. For the moment, this should be a Regular.", GUI.skin.label);
                         if (GUILayout.Button($"Create", GUI.skin.button))
                         {
                             InitCompanion();
-                            StartCoroutine(InitNpc());
+                            SendNpcInitMessage();
                         }
                         if (IsCompanionInitialized && IsNpcInitialized)
-                        {
+                        {                           
+                            if (GUILayout.Button($"Instructions", GUI.skin.button))
+                            {
+                                GUILayout.Label($"These are the instructions used to initialize your companion: ", GUI.skin.label);
+                                if (LocalInstruction != null)
+                                {
+                                    GUILayout.Label($"{nameof(LocalInstruction.FromSystem)}: {LocalInstruction.FromSystem}", GUI.skin.label);
+                                    GUILayout.Label($"{nameof(LocalInstruction.FromUser)}: {LocalInstruction.FromUser}", GUI.skin.label);
+                                }
+                                else
+                                {
+                                    GUILayout.Label($"If this is visible, something went wrong with the instructions, sorry ;p", GUI.skin.label);
+                                }
+                            }
+
                             GUILayout.Label($"Here you can type in any question you would like to ask your companion.", GUI.skin.label);
                             using (new GUILayout.HorizontalScope(GUI.skin.box))
                             {
@@ -206,15 +226,7 @@ namespace ModCompanion
                             }
                             if (GUILayout.Button($"Send", GUI.skin.button))
                             {
-                                SendNpcMessage();
-                                if (!string.IsNullOrEmpty(Answer))
-                                {
-                                    ShowHUDBigInfo(Answer);
-                                }
-                                else
-                                {
-                                    ShowHUDBigInfo($"Something went wrong!\nThe answer was empty, sorry ;p");
-                                }
+                                SendNpcMessage();                              
                             }
                         }
                         else
@@ -313,9 +325,6 @@ namespace ModCompanion
         public string Question { get; set; } = string.Empty;
         public string Answer { get; set; } = string.Empty;
 
-        private readonly string NpcInitUrl = "https://localhost:7230/npc/init?npcName=";
-        private readonly string NpcPromptUrl = "https://localhost:7230/npc/prompt?scribe=true&gpt=true&question=";
-
         protected virtual void Start()
         {          
             InitData();
@@ -332,7 +341,7 @@ namespace ModCompanion
             return Instance;
         }
 
-        private void HandleException(Exception exc, string methodName)
+        protected virtual void HandleException(Exception exc, string methodName)
         {
             string info = $"[{ModName}:{methodName}] throws exception -  {exc.TargetSite?.Name}:\n{exc.Message}\n{exc.InnerException}\n{exc.Source}\n{exc.StackTrace}";
             ModAPI.Log.Write(info);
@@ -362,13 +371,14 @@ namespace ModCompanion
             LocalPlayer = Player.Get();
             LocalHUDManager = HUDManager.Get();
             LocalAIManager = AIManager.Get();
+            LocalInstructionsManager = InstructionsManager.Get();
         }
 
         protected virtual void InitCompanion()
         {
             try
             {
-                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(AI.AIID.Spearman.ToString());
+                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(AI.AIID.Regular.ToString());
                 if (companionPrefab != null)
                 {
                     Vector3 forward = Camera.main.transform.forward;
@@ -376,34 +386,46 @@ namespace ModCompanion
                     ParentAi = Instantiate(companionPrefab, position, Quaternion.LookRotation(-forward, Vector3.up)).GetComponent<AI>();
                     if (ParentAi == null)
                     {
-                        ShowHUDBigInfo("Error - could not initialize parent AI spearman!");
                         IsCompanionInitialized = false;
+                        ShowHUDBigInfo($"Error - could not initialize parent AI {AI.AIID.Regular}!");
                     }
                     else
                     {
                         NpcName = ParentAi.GetName();                        
                         ParentObject = ParentAi.gameObject;
                         IsCompanionInitialized = true;
+                        ShowHUDBigInfo($"Companion {AI.AIID.Regular} was created!");
                     }
                 }
                 else
                 {
-                    ShowHUDBigInfo("Error - could not initialize companion!");
                     IsCompanionInitialized = false;
+                    ShowHUDBigInfo($"Error - could not initialize {AI.AIID.Regular}!");
                 }
             }
             catch (Exception exc)
             {
-                HandleException(exc, nameof(InitCompanion));
-                ShowHUDBigInfo(exc.Message);
+                HandleException(exc, nameof(InitCompanion));               
                 IsCompanionInitialized = false;
+                ShowHUDBigInfo(exc.Message);
             }
         }
 
-        protected virtual IEnumerator InitNpc()
+        public virtual void SendNpcInitMessage() 
         {
-            string url = NpcInitUrl + NpcName;
-            UnityWebRequest www = UnityWebRequest.Post(url, string.Empty);
+            StartCoroutine(InitNpcAsync());
+        } 
+
+        public virtual void SendNpcMessage()
+        {
+            StartCoroutine(PostMessage());
+        }
+
+        protected virtual IEnumerator InitNpcAsync()
+        {
+            LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
+            string url = LocalInstructionsManager.NpcInitUrl + NpcName;
+            UnityWebRequest www = UnityWebRequest.Post(url, JsonUtility.ToJson(LocalInstruction));
             yield return www.SendWebRequest();
 
             if (www.result != UnityWebRequest.Result.Success)
@@ -414,17 +436,13 @@ namespace ModCompanion
             else
             {
                 IsNpcInitialized = true;
+                ShowHUDBigInfo($"NPC initialized!");
             }
-        }
-
-        public virtual void SendNpcMessage()
-        {
-            StartCoroutine(PostMessage());
         }
 
         protected virtual IEnumerator PostMessage()
         {
-            string url = NpcPromptUrl + Question;
+            string url = LocalInstructionsManager.NpcPromptUrl + Question;
             UnityWebRequest www = UnityWebRequest.Get(url);
             yield return www.SendWebRequest();
 
@@ -435,6 +453,15 @@ namespace ModCompanion
             else
             {
                 Answer = www.downloadHandler.text;
+                if (!string.IsNullOrEmpty(Answer))
+                {
+                    ShowHUDBigInfo(Answer);
+                }
+                else
+                {
+                    ModAPI.Log.Write(ErrorMessage);
+                    ShowHUDBigInfo(ErrorMessage);
+                }
             }
         }
 

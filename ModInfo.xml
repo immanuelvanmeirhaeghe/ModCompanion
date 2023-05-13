@@ -1,5 +1,21 @@
 <Mod ID="ModCompanion">
   <Compatible>2.4.2</Compatible>
+  <Button Standard="Multiply" ID="ShortcutKey">
+    <Name>
+      <EN>Press shortcut key</EN>
+    </Name>
+    <Description>
+      <EN>to open the main mod screen.</EN>
+    </Description>
+  </Button>
+  <Button>
+    <Name>
+      <EN></EN>
+    </Name>
+    <Description>
+      <EN></EN>
+    </Description>
+  </Button>
   <Name>
     <EN>ModCompanion</EN>
   </Name>
