@@ -44,7 +44,9 @@ namespace ModCompanion
         private static int ModCompanionScreenId { get; set; }
         private static Rect ModCompanionScreen = new Rect(ModCompanionScreenStartPositionX, ModCompanionScreenStartPositionY, ModCompanionScreenTotalWidth, ModCompanionScreenTotalHeight);
         private bool ShowModCompanionScreen { get; set; } = false;
-
+        private Vector3 Previous;
+        private Vector3 Target;
+        private Vector3 OriginalPosition;
         public bool IsModActiveForMultiplayer { get; private set; } = false;
         public bool IsModActiveForSingleplayer => ReplTools.AmIMaster();
 
@@ -329,18 +331,8 @@ namespace ModCompanion
         public bool IsCompanionInitialized { get; set; } = false;
         public string Question { get; set; } = string.Empty;
         public string Answer { get; set; } = string.Empty;
-
-
-        private Vector3 Previous;
-
-        private Vector3 Target;
-
-        private Vector3 OriginalPosition;
-
         public Vector3 BoundingVolume = new Vector3(3f, 1f, 3f);
-
         public float Speed = 10f;
-
         public float RotateSpeed = 5f;
 
         protected virtual void Start()
@@ -469,9 +461,25 @@ namespace ModCompanion
 
         protected virtual IEnumerator InitNpc()
         {
-            LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
+            NpcName = NpcName.Replace($"(Clone)", string.Empty);
             string url = LocalInstructionsManager.NpcInitUrl + NpcName;
-            string postData = JsonUtility.ToJson(LocalInstruction);
+            LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
+           
+            string postData = string.Empty;
+            if (LocalInstruction != null && !string.IsNullOrEmpty(LocalInstruction.FromSystem) && !string.IsNullOrEmpty(LocalInstruction.FromUser))
+            {
+                postData = JsonUtility.ToJson(LocalInstruction);
+            }
+            else
+            {
+                LocalInstruction = new Instruction 
+                {
+                    FromSystem = LocalInstructionsManager.GetSystemInstructionsAsync(NpcName).Current,
+                    FromUser = LocalInstructionsManager.GetUserInstructionsAsync(NpcName).Current,
+                };
+                postData = JsonUtility.ToJson(LocalInstruction);
+            }
+           
             UnityWebRequest www = UnityWebRequest.Post(url, postData);
             yield return www.SendWebRequest();
 

@@ -8,19 +8,11 @@
       <EN>to open the main mod screen.</EN>
     </Description>
   </Button>
-  <Button ID="">
-    <Name>
-      <EN></EN>
-    </Name>
-    <Description>
-      <EN></EN>
-    </Description>
-  </Button>
   <Name>
     <EN>ModCompanion</EN>
   </Name>
   <Description>
-    <EN>ModCompanion</EN>
+    <EN>ModCompanion is a mod for Green Hell that gives a Spearman companion to the player.</EN>
   </Description>
   <Version>1.0.0.0</Version>
 </Mod>
