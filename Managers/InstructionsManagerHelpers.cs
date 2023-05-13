@@ -5,7 +5,8 @@ namespace ModCompanion.Managers
 {
     public class InstructionsManagerHelpers : MonoBehaviour
     {
-        public static string DefaultPath { get; set; } = AppContext.BaseDirectory.ToString();
+
+        public static string DefaultPath { get; set; } = Application.dataPath.Replace("GH_Data", "Mods");
         public static string DefaultGameDataPath { get; set; } = "Data";
         public static string DefaultSystemInstructionsFileName { get; set; } = "SystemInstructions.txt";
         public static string DefaultUserInstructionsFileName { get; set; } = "UserInstructions.txt";

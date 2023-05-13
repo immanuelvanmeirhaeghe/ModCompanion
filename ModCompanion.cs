@@ -458,7 +458,11 @@ namespace ModCompanion
                 NpcName = NpcName.Replace($"(Clone)", string.Empty);
                 LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
                 LocalInstructionsManager.NpcInitUrlToPost = LocalInstructionsManager.NpcInitUrl + NpcName;
-                
+
+                string instructionDownLoadPath = $" {nameof(LocalInstructionsManager.InstructionDownloadPath)}: {LocalInstructionsManager.InstructionDownloadPath}";
+                ModAPI.Log.Write(instructionDownLoadPath);             
+                ShowHUDBigInfo(instructionDownLoadPath);
+
                 PostData = $"{{ {nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" }}";
 
                 ShowHUDBigInfo(PostData);

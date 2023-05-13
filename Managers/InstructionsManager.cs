@@ -23,6 +23,7 @@ namespace ModCompanion.Managers
         public string NpcInitUrlToPost { get; set; } = string.Empty;
         public string SystemInstructions { get; set; } = string.Empty;
         public string UserInstructions { get; set; } = string.Empty;
+        public string InstructionDownloadPath { get; set; } = string.Empty;
 
         public InstructionsManager() 
         {
@@ -53,8 +54,8 @@ namespace ModCompanion.Managers
             string dataPath = gameDataPath ?? InstructionsManagerHelpers.DefaultGameDataPath;
             string pathParameter = gameDataPathParameter ?? InstructionsManagerHelpers.DefaultGameDataPathParameter;
             string fileName = systemInstructionsFileName ?? InstructionsManagerHelpers.DefaultSystemInstructionsFileName;
-            string path = Path.Combine(InstructionsManagerHelpers.DefaultPath, dataPath, fileName);
-            SystemInstructions = File.ReadAllText(path).Replace(pathParameter, dataPath).Replace(nameParameter, name);
+            InstructionDownloadPath = Path.Combine(InstructionsManagerHelpers.DefaultPath, fileName);
+            SystemInstructions = File.ReadAllText(InstructionDownloadPath).Replace(pathParameter, dataPath).Replace(nameParameter, name);
             return SystemInstructions;
         }
 
@@ -80,7 +81,8 @@ namespace ModCompanion.Managers
             string dataPath = gameDataPath ?? InstructionsManagerHelpers.DefaultGameDataPath;
             string pathParameter = gameDataPathParameter ?? InstructionsManagerHelpers.DefaultGameDataPathParameter;
             string fileName = userInstructionsFileName ?? InstructionsManagerHelpers.DefaultUserInstructionsFileName;
-            UserInstructions = File.ReadAllText(Path.Combine(InstructionsManagerHelpers.DefaultPath, dataPath, fileName)).Replace(pathParameter, dataPath).Replace(nameParameter, name);
+            InstructionDownloadPath = Path.Combine(InstructionsManagerHelpers.DefaultPath, fileName);
+            UserInstructions = File.ReadAllText(InstructionDownloadPath).Replace(pathParameter, dataPath).Replace(nameParameter, name);
             return UserInstructions;
         }
 
