@@ -463,26 +463,28 @@ namespace ModCompanion
         {
             NpcName = NpcName.Replace($"(Clone)", string.Empty);
             string url = LocalInstructionsManager.NpcInitUrl + NpcName;
+           
             LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
-            string data = string.Empty;
-            string postData = string.Empty;
+            string data;
+            string postData;
             if (LocalInstruction != null && !string.IsNullOrEmpty(LocalInstruction.FromSystem) && !string.IsNullOrEmpty(LocalInstruction.FromUser))
             {
                 data = $"{nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" ";
-                postData = JsonUtility.ToJson(data);
+                postData = $"{{ {data} }}";
             }
             else
             {
-                LocalInstruction = new Instruction 
+                LocalInstruction = new Instruction
                 {
                     FromSystem = LocalInstructionsManager.GetSystemInstructionsAsync(NpcName).Current,
                     FromUser = LocalInstructionsManager.GetUserInstructionsAsync(NpcName).Current,
                 };
                 data = $"{nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" ";
-                postData = JsonUtility.ToJson(LocalInstruction);
+                postData = $"{{ {data} }}";
             }
-           
-            UnityWebRequest www = UnityWebRequest.Post(url, data);
+            ShowHUDBigInfo(postData);
+                
+            UnityWebRequest www = UnityWebRequest.Post(url, postData);
             yield return www.SendWebRequest();
 
             if (www.result != UnityWebRequest.Result.Success)
