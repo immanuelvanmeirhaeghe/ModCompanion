@@ -20,7 +20,7 @@ namespace ModCompanion.Managers
         public readonly string NpcInstructionUrl = "https://localhost:7230/npc/instruction?npcName=";
         public readonly string NpcPromptUrl = "https://localhost:7230/npc/prompt?scribe=true&gpt=true&question=";
 
-
+        public string NpcInitUrlToPost { get; set; } = string.Empty;
         public string SystemInstructions { get; set; } = string.Empty;
         public string UserInstructions { get; set; } = string.Empty;
 

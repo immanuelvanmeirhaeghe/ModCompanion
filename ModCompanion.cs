@@ -202,7 +202,7 @@ namespace ModCompanion
                         if (GUILayout.Button($"Create", GUI.skin.button))
                         {
                             InitCompanion();
-                            PostInitNpcMessage();
+                            InitNpc();
                         }
                         if (IsCompanionInitialized && IsNpcInitialized)
                         {                           
@@ -331,6 +331,8 @@ namespace ModCompanion
         public bool IsCompanionInitialized { get; set; } = false;
         public string Question { get; set; } = string.Empty;
         public string Answer { get; set; } = string.Empty;
+        public string PostData { get; set; } = string.Empty;
+
         public Vector3 BoundingVolume = new Vector3(3f, 1f, 3f);
         public float Speed = 10f;
         public float RotateSpeed = 5f;
@@ -449,47 +451,36 @@ namespace ModCompanion
             }
         }
 
-        public virtual void PostInitNpcMessage() 
+        public virtual void InitNpc() 
         {
-            StartCoroutine(InitNpc());
-        } 
+            if (!IsNpcInitialized)
+            {
+                NpcName = NpcName.Replace($"(Clone)", string.Empty);
+                LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
+                LocalInstructionsManager.NpcInitUrlToPost = LocalInstructionsManager.NpcInitUrl + NpcName;
+                
+                PostData = $"{{ {nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" }}";
 
-        public virtual void AskQuestion()
+                ShowHUDBigInfo(PostData);
+                StartCoroutine(PostInitNpcMessage());
+            }
+        }
+
+        protected virtual void AskQuestion()
         {
             StartCoroutine(GetAnswer());
         }
 
-        protected virtual IEnumerator InitNpc()
-        {
-            NpcName = NpcName.Replace($"(Clone)", string.Empty);
-            string url = LocalInstructionsManager.NpcInitUrl + NpcName;
-           
-            LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
-            string data;
-            string postData;
-            if (LocalInstruction != null && !string.IsNullOrEmpty(LocalInstruction.FromSystem) && !string.IsNullOrEmpty(LocalInstruction.FromUser))
-            {
-                data = $"{nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" ";
-                postData = $"{{ {data} }}";
-            }
-            else
-            {
-                LocalInstruction = new Instruction
-                {
-                    FromSystem = LocalInstructionsManager.GetSystemInstructions(NpcName),
-                    FromUser = LocalInstructionsManager.GetUserInstructions(NpcName),
-                };
-                data = $"{nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" ";
-                postData = $"{{ {data} }}";
-            }
-            ShowHUDBigInfo(postData);
-                
-            UnityWebRequest www = UnityWebRequest.Post(url, postData);
+        protected virtual IEnumerator PostInitNpcMessage()
+        {       
+            UnityWebRequest www = UnityWebRequest.Post(LocalInstructionsManager.NpcInitUrlToPost, PostData);
+            www.SetRequestHeader("Content-Type", "application/json");
+            www.SetRequestHeader("Accept", "application/json");
             yield return www.SendWebRequest();
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                string errorMsg = $"NPC not initialized!\nError for POST {url} with {postData}\n{www.error}";
+                string errorMsg = $"NPC not initialized!\nError for POST {LocalInstructionsManager.NpcInitUrlToPost} with {PostData}\n{www.error}";
                 ModAPI.Log.Write(errorMsg);
                 IsNpcInitialized = false;
                 ShowHUDBigInfo(errorMsg);
