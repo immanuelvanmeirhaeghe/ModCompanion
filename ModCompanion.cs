@@ -13,6 +13,8 @@ using ModManager.Data.Enums;
 using ModCompanion.Managers;
 using ModCompanion.Data;
 using System.Threading.Tasks;
+using System.Web.Util;
+using System.Web;
 
 namespace ModCompanion
 {
@@ -456,7 +458,7 @@ namespace ModCompanion
             if (!IsNpcInitialized)
             {
                 NpcName = NpcName.Replace($"(Clone)", string.Empty);
-                LocalInstructionsManager.NpcInitUrlToPost = $"{LocalInstructionsManager.NpcInitUrl}&gameName=GreenHell&npcName={NpcName}";
+                LocalInstructionsManager.NpcInitUrlToPost = HttpUtility.UrlEncode($"{LocalInstructionsManager.NpcInitUrl}&gameName=GreenHell&npcName={NpcName}");
                 StartCoroutine(PostInitNpcMessage());
             }
         }
@@ -489,7 +491,7 @@ namespace ModCompanion
 
         protected virtual IEnumerator GetAnswer()
         {
-            string url = $"{LocalInstructionsManager.NpcPromptUrl}&question={Question}&npcName={NpcName}";
+            string url = HttpUtility.UrlEncode($"{LocalInstructionsManager.NpcPromptUrl}&question={Question}&npcName={NpcName}");
             UnityWebRequest www = UnityWebRequest.Get(url);
             yield return www.SendWebRequest();
 
