@@ -460,11 +460,11 @@ namespace ModCompanion
                 LocalInstructionsManager.NpcInitUrlToPost = LocalInstructionsManager.NpcInitUrl + NpcName;
 
                 string instructionDownLoadPath = $" {nameof(LocalInstructionsManager.InstructionDownloadPath)}: {LocalInstructionsManager.InstructionDownloadPath}";
-                ModAPI.Log.Write(instructionDownLoadPath);             
+                ModAPI.Log.Write(instructionDownLoadPath);
                 ShowHUDBigInfo(instructionDownLoadPath);
 
                 PostData = $"{{ \"fromSystem\": \"{LocalInstruction.FromSystem}\", \"fromUser\": \"{LocalInstruction.FromUser}\" }}";
-
+                ModAPI.Log.Write(PostData);
                 ShowHUDBigInfo(PostData);
                 StartCoroutine(PostInitNpcMessage());
             }
