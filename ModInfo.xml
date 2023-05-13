@@ -1,0 +1,10 @@
+<Mod ID="ModCompanion">
+  <Compatible>2.4.2</Compatible>
+  <Name>
+    <EN>ModCompanion</EN>
+  </Name>
+  <Description>
+    <EN>ModCompanion</EN>
+  </Description>
+  <Version>1.0.0.0</Version>
+</Mod>
