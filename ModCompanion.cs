@@ -1,20 +1,15 @@
 ﻿using AIs;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Xml;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Networking;
 using System.Collections;
 using ModManager.Data.Enums;
 using ModCompanion.Managers;
 using ModCompanion.Data;
-using System.Threading.Tasks;
-using System.Web.Util;
 using System.Web;
+using System.Text.Json;
 
 namespace ModCompanion
 {
@@ -52,6 +47,23 @@ namespace ModCompanion
         public bool IsModActiveForMultiplayer { get; private set; } = false;
         public bool IsModActiveForSingleplayer => ReplTools.AmIMaster();
 
+        public KeyCode ShortcutKey { get; set; } = KeyCode.KeypadMultiply;
+        public AI ParentAi { get; set; } = null;
+        public GameObject ParentObject { get; set; } = null;
+        public string NpcName { get; set; } = string.Empty;
+        public bool IsNpcInitialized { get; set; } = false;
+        public bool IsCompanionInitialized { get; set; } = false;
+        public string Question { get; set; } = string.Empty;
+        public string Answer { get; set; } = string.Empty;
+        public string PostData { get; set; } = string.Empty;
+        public Vector2 AISelectionScrollViewPosition { get; private set; }
+        public int SelectedAiIndex { get; private set; }
+        public string SelectedAiName { get; private set; }
+
+        public Vector3 BoundingVolume = new Vector3(3f, 1f, 3f);
+        public float Speed = 10f;
+        public float RotateSpeed = 5f;
+
         private string OnlyForSinglePlayerOrHostMessage()
                     => "Only available for single player or when host. Host can activate using ModManager.";
         private string PermissionChangedMessage(string permission, string reason)
@@ -67,7 +79,7 @@ namespace ModCompanion
             }
         }
 
-        private void ModManager_onPermissionValueChanged(bool optionValue)
+        protected virtual void  ModManager_onPermissionValueChanged(bool optionValue)
         {
             string reason = optionValue ? "the game host allowed usage" : "the game host did not allow usage";
             IsModActiveForMultiplayer = optionValue;
@@ -200,28 +212,39 @@ namespace ModCompanion
                         GUILayout.Label($"{ModName} Manager", GUI.skin.label);
                         GUILayout.Label($"{ModName} Options", GUI.skin.label);
 
-                        GUILayout.Label($"Start with creating your companion. For the moment, this should be a Regular.", GUI.skin.label);
-                        if (GUILayout.Button($"Create", GUI.skin.button))
+                        GUILayout.Label($"Start with choosing and creating your companion.", GUI.skin.label);
+                        AISelectionScrollViewBox();
+                        if (GUILayout.Button($"Create Companion", GUI.skin.button))
                         {
                             InitCompanion();
                             InitNpc();
                         }
-                        if (IsCompanionInitialized && IsNpcInitialized)
-                        {                           
-                            if (GUILayout.Button($"Instructions", GUI.skin.button))
+
+                        GUILayout.Label($"These are the instructions used to initialize your companion: ", GUI.skin.label);
+                        if (GUILayout.Button($"Instructions", GUI.skin.button))
+                        {
+                             GetInstructions();
+                            if (LocalInstruction != null)
                             {
-                                GUILayout.Label($"These are the instructions used to initialize your companion: ", GUI.skin.label);
-                                if (LocalInstruction != null)
+                                using (new GUILayout.VerticalScope(GUI.skin.box))
                                 {
-                                    GUILayout.Label($"{nameof(LocalInstruction.FromSystem)}: {LocalInstruction.FromSystem}", GUI.skin.label);
-                                    GUILayout.Label($"{nameof(LocalInstruction.FromUser)}: {LocalInstruction.FromUser}", GUI.skin.label);
+                                    GUILayout.Label($"{nameof(LocalInstruction.FromSystem)}: ", GUI.skin.label);
+                                    GUILayout.Label($"{LocalInstruction.FromSystem}", GUI.skin.label);                                    
                                 }
-                                else
+                                using (new GUILayout.VerticalScope(GUI.skin.box))
                                 {
-                                    GUILayout.Label(ErrorMessage, GUI.skin.label);
+                                    GUILayout.Label($"{nameof(LocalInstruction.FromUser)}: ", GUI.skin.label);
+                                    GUILayout.Label($"{LocalInstruction.FromUser}", GUI.skin.label);
                                 }
                             }
+                            else
+                            {
+                                GUILayout.Label($"Instructions could not be retrieved. {ErrorMessage} ", GUI.skin.label);
+                            }
+                        }
 
+                        if (IsCompanionInitialized && IsNpcInitialized)
+                        { 
                             GUILayout.Label($"Here you can type in any question you would like to ask your companion.", GUI.skin.label);
                             using (new GUILayout.HorizontalScope(GUI.skin.box))
                             {
@@ -324,21 +347,6 @@ namespace ModCompanion
             }
         }
 
-        public KeyCode ShortcutKey { get; set; } = KeyCode.KeypadMultiply;
-
-        public AI ParentAi { get; set; } = null;
-        public GameObject ParentObject { get; set; } = null;
-        public string NpcName { get;  set; } = string.Empty;
-        public bool IsNpcInitialized { get; set; } = false;
-        public bool IsCompanionInitialized { get; set; } = false;
-        public string Question { get; set; } = string.Empty;
-        public string Answer { get; set; } = string.Empty;
-        public string PostData { get; set; } = string.Empty;
-
-        public Vector3 BoundingVolume = new Vector3(3f, 1f, 3f);
-        public float Speed = 10f;
-        public float RotateSpeed = 5f;
-
         protected virtual void Start()
         {          
             InitData();
@@ -419,7 +427,11 @@ namespace ModCompanion
         {
             try
             {
-                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(AI.AIID.Spearman.ToString());
+                if (string.IsNullOrEmpty(SelectedAiName))
+                {
+                    return;
+                }
+                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(SelectedAiName);
                 if (companionPrefab != null)
                 {
                     Vector3 forward = Camera.main.transform.forward;
@@ -428,21 +440,21 @@ namespace ModCompanion
                     if (ParentAi == null)
                     {
                         IsCompanionInitialized = false;
-                        ShowHUDBigInfo($"Error - could not initialize parent AI {AI.AIID.Spearman}!");
+                        ShowHUDBigInfo($"Error - could not initialize parent AI {SelectedAiName}!");
                     }
                     else
                     {
                         ParentAi.m_EnemyModule.m_Enemy = null;
-                        NpcName = ParentAi.GetName();                        
+                        NpcName = ParentAi.GetName().Replace("(Clone)", string.Empty);
                         ParentObject = ParentAi.gameObject;
                         IsCompanionInitialized = true;
-                        ShowHUDBigInfo($"Companion {AI.AIID.Spearman} was created!");
+                        ShowHUDBigInfo($"Companion {SelectedAiName} was created!");
                     }
                 }
                 else
                 {
                     IsCompanionInitialized = false;
-                    ShowHUDBigInfo($"Error - could not initialize {AI.AIID.Spearman}!");
+                    ShowHUDBigInfo($"Error - could not initialize {SelectedAiName}!");
                 }
             }
             catch (Exception exc)
@@ -458,7 +470,7 @@ namespace ModCompanion
             if (!IsNpcInitialized)
             {
                 NpcName = NpcName.Replace($"(Clone)", string.Empty);
-                LocalInstructionsManager.NpcInitUrlToPost = HttpUtility.UrlEncode($"{LocalInstructionsManager.NpcInitUrl}&gameName=GreenHell&npcName={NpcName}");
+                LocalInstructionsManager.NpcInitUrlToPost =$"{LocalInstructionsManager.NpcInitUrl}&gameName=GreenHell&npcName={HttpUtility.UrlEncode(NpcName)}";
                 StartCoroutine(PostInitNpcMessage());
             }
         }
@@ -466,6 +478,40 @@ namespace ModCompanion
         protected virtual void AskQuestion()
         {
             StartCoroutine(GetAnswer());
+        }
+
+        protected virtual void GetInstructions()
+        {
+            StartCoroutine(RequestInstructions());
+        }
+
+        protected virtual IEnumerator RequestInstructions()
+        {
+            string url = $"{LocalInstructionsManager.NpcInstructionUrl}&npcName={HttpUtility.UrlEncode(NpcName)}";
+            UnityWebRequest www = UnityWebRequest.Get(url);
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                string errorMsg = $"Could not request any instruction!\nError for GET {url}\n{www.error}";
+                ModAPI.Log.Write(errorMsg);
+                ShowHUDBigInfo(errorMsg);
+            }
+            else
+            {
+                LocalInstruction = JsonSerializer.Deserialize<Instruction>(www.downloadHandler.text);
+                if (LocalInstruction != null)
+                {
+                    ShowHUDBigInfo($"{nameof(LocalInstruction.FromSystem)}\n{LocalInstruction.FromSystem}");
+                    ShowHUDBigInfo($"{nameof(LocalInstruction.FromUser)}\n{LocalInstruction.FromUser}");
+                }
+                else
+                {
+                    string errorMsg = $"NPC did not give any answer!\n{ErrorMessage}";
+                    ModAPI.Log.Write(errorMsg);
+                    ShowHUDBigInfo(errorMsg);
+                }
+            }
         }
 
         protected virtual IEnumerator PostInitNpcMessage()
@@ -491,7 +537,7 @@ namespace ModCompanion
 
         protected virtual IEnumerator GetAnswer()
         {
-            string url = HttpUtility.UrlEncode($"{LocalInstructionsManager.NpcPromptUrl}&question={Question}&npcName={NpcName}");
+            string url = $"{LocalInstructionsManager.NpcPromptUrl}&question={HttpUtility.UrlEncode(Question)}&npcName={HttpUtility.UrlEncode(NpcName)}";
             UnityWebRequest www = UnityWebRequest.Get(url);
             yield return www.SendWebRequest();
 
@@ -517,6 +563,50 @@ namespace ModCompanion
             }
         }
 
+        protected virtual void  AISelectionScrollViewBox()
+        {
+            try
+            {
+                using (new GUILayout.VerticalScope(GUI.skin.box))
+                {
+                    GUILayout.Label("AI selection grid", GUI.skin.label);
+
+                    AiSelectionScrollView();
+                }
+            }
+            catch (Exception exc)
+            {
+                HandleException(exc, nameof(AISelectionScrollViewBox));
+            }
+        }
+
+        protected virtual void  AiSelectionScrollView()
+        {
+            try
+            {
+                AISelectionScrollViewPosition = GUILayout.BeginScrollView(AISelectionScrollViewPosition, GUI.skin.scrollView, GUILayout.MinHeight(300f));
+
+                string[] aiNames = GetAINames();
+                if (aiNames != null)
+                {
+                    int _selectedAiIndex = SelectedAiIndex;
+                    SelectedAiIndex = GUILayout.SelectionGrid(SelectedAiIndex, aiNames, 3, GUI.skin.button);
+                    SelectedAiName = aiNames[SelectedAiIndex];
+                }
+
+                GUILayout.EndScrollView();
+            }
+            catch (Exception exc)
+            {
+                HandleException(exc, nameof(AiSelectionScrollView));
+            }
+        }
+
+        public virtual string[] GetAINames()
+        {
+            var aiNames = Enum.GetNames(typeof(AI.AIID));
+            return aiNames;
+        }
     }
 
 }
