@@ -19,7 +19,7 @@ namespace ModCompanion
 
     public class ModCompanion : MonoBehaviour
     {
-        private const string ErrorMessage = "Something went wrong!\nThe answer was empty, sorry ;p";
+        private const string ErrorMessage = "Something went wrong, sorry ;p";
         private static ModCompanion Instance;
         private static readonly string ModName = nameof(ModCompanion);
         private static readonly string RuntimeConfiguration = Path.Combine(Application.dataPath.Replace("GH_Data", "Mods"), $"{nameof(RuntimeConfiguration)}.xml");
@@ -200,7 +200,7 @@ namespace ModCompanion
                         if (GUILayout.Button($"Create", GUI.skin.button))
                         {
                             InitCompanion();
-                            SendNpcInitMessage();
+                            PostInitNpcMessage();
                         }
                         if (IsCompanionInitialized && IsNpcInitialized)
                         {                           
@@ -214,7 +214,7 @@ namespace ModCompanion
                                 }
                                 else
                                 {
-                                    GUILayout.Label($"If this is visible, something went wrong with the instructions, sorry ;p", GUI.skin.label);
+                                    GUILayout.Label(ErrorMessage, GUI.skin.label);
                                 }
                             }
 
@@ -226,12 +226,20 @@ namespace ModCompanion
                             }
                             if (GUILayout.Button($"Send", GUI.skin.button))
                             {
-                                SendNpcMessage();                              
+                                AskQuestion();
+                            }
+                            if (!string.IsNullOrEmpty(Answer))
+                            {
+                                GUILayout.Label($"Answer: {Answer}", GUI.skin.label);
+                            }
+                            else
+                            {
+                                GUILayout.Label($"First, ask your companion a question. If you did and this is still visible: {ErrorMessage}", GUI.skin.label);
                             }
                         }
                         else
                         {
-                            GUILayout.Label($"First create your companion. If you did and this still is visible, something went wrong, sorry ;p", GUI.skin.label);
+                            GUILayout.Label($"First create your companion. If you did and this still is visible: {ErrorMessage}", GUI.skin.label);
                             GUILayout.Label($"{nameof(IsCompanionInitialized)}: {IsCompanionInitialized}", GUI.skin.label);
                             GUILayout.Label($"{nameof(IsNpcInitialized)}: {IsNpcInitialized}", GUI.skin.label);
                         }                      
@@ -239,10 +247,7 @@ namespace ModCompanion
                 }
                 else
                 {
-                    using (new GUILayout.VerticalScope(GUI.skin.box))
-                    {
-                        GUILayout.Label($"Only for host or singleplayer!", GUI.skin.label);
-                    }
+                    OnlyForSingleplayerOrWhenHostBox();
                 }
             }
             catch (Exception exc)
@@ -411,17 +416,17 @@ namespace ModCompanion
             }
         }
 
-        public virtual void SendNpcInitMessage() 
+        public virtual void PostInitNpcMessage() 
         {
-            StartCoroutine(InitNpcAsync());
+            StartCoroutine(InitNpc());
         } 
 
-        public virtual void SendNpcMessage()
+        public virtual void AskQuestion()
         {
-            StartCoroutine(PostMessage());
+            StartCoroutine(GetAnswer());
         }
 
-        protected virtual IEnumerator InitNpcAsync()
+        protected virtual IEnumerator InitNpc()
         {
             LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
             string url = LocalInstructionsManager.NpcInitUrl + NpcName;
@@ -440,7 +445,7 @@ namespace ModCompanion
             }
         }
 
-        protected virtual IEnumerator PostMessage()
+        protected virtual IEnumerator GetAnswer()
         {
             string url = LocalInstructionsManager.NpcPromptUrl + Question;
             UnityWebRequest www = UnityWebRequest.Get(url);
@@ -449,6 +454,7 @@ namespace ModCompanion
             if (www.result != UnityWebRequest.Result.Success)
             {
                 ModAPI.Log.Write(www.error);
+                ShowHUDBigInfo(www.error);
             }
             else
             {
