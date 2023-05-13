@@ -463,7 +463,7 @@ namespace ModCompanion
                 ModAPI.Log.Write(instructionDownLoadPath);             
                 ShowHUDBigInfo(instructionDownLoadPath);
 
-                PostData = $"{{ {nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" }}";
+                PostData = $"{{ \"fromSystem\": \"{LocalInstruction.FromSystem}\", \"fromUser\": \"{LocalInstruction.FromUser}\" }}";
 
                 ShowHUDBigInfo(PostData);
                 StartCoroutine(PostInitNpcMessage());
