@@ -8,7 +8,7 @@
       <EN>to open the main mod screen.</EN>
     </Description>
   </Button>
-  <Button>
+  <Button ID="">
     <Name>
       <EN></EN>
     </Name>

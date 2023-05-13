@@ -330,9 +330,25 @@ namespace ModCompanion
         public string Question { get; set; } = string.Empty;
         public string Answer { get; set; } = string.Empty;
 
+
+        private Vector3 Previous;
+
+        private Vector3 Target;
+
+        private Vector3 OriginalPosition;
+
+        public Vector3 BoundingVolume = new Vector3(3f, 1f, 3f);
+
+        public float Speed = 10f;
+
+        public float RotateSpeed = 5f;
+
         protected virtual void Start()
         {          
             InitData();
+            OriginalPosition = transform.position;
+            Previous = transform.position;
+            Target = transform.position;
         }
 
         public ModCompanion()
@@ -368,6 +384,30 @@ namespace ModCompanion
                     EnableCursor(false);
                 }
             }
+
+            if (IsCompanionInitialized && IsNpcInitialized)
+            {
+                UpdateCompanion();
+            }
+        }
+
+        protected virtual void UpdateCompanion()
+        {
+            ParentAi.m_EnemyModule.SetEnemy(LocalAIManager.m_EnemyAIs.FirstOrDefault());
+            ParentAi.m_EnemyModule.Update();
+
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(LocalPlayer.transform.position - transform.position), RotateSpeed * Time.deltaTime);
+            transform.position = Vector3.Slerp(Previous, Target, Time.deltaTime * Speed);
+            Previous = transform.position;
+            if (Vector3.Distance(Target, transform.position) < 0.1f)
+            {
+                Target = transform.position + UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(0.7f, 4f);
+                Target.Set(
+                    Mathf.Clamp(Target.x, OriginalPosition.x - BoundingVolume.x, OriginalPosition.x + BoundingVolume.x), 
+                    Mathf.Clamp(Target.y, OriginalPosition.y - BoundingVolume.y, OriginalPosition.y + BoundingVolume.y), 
+                    Mathf.Clamp(Target.z, OriginalPosition.z - BoundingVolume.z, OriginalPosition.z + BoundingVolume.z)
+                );
+            }
         }
 
         protected virtual void InitData()
@@ -383,7 +423,7 @@ namespace ModCompanion
         {
             try
             {
-                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(AI.AIID.Regular.ToString());
+                GameObject companionPrefab = GreenHellGame.Instance.GetPrefab(AI.AIID.Spearman.ToString());
                 if (companionPrefab != null)
                 {
                     Vector3 forward = Camera.main.transform.forward;
@@ -392,20 +432,21 @@ namespace ModCompanion
                     if (ParentAi == null)
                     {
                         IsCompanionInitialized = false;
-                        ShowHUDBigInfo($"Error - could not initialize parent AI {AI.AIID.Regular}!");
+                        ShowHUDBigInfo($"Error - could not initialize parent AI {AI.AIID.Spearman}!");
                     }
                     else
                     {
+                        ParentAi.m_EnemyModule.m_Enemy = null;
                         NpcName = ParentAi.GetName();                        
                         ParentObject = ParentAi.gameObject;
                         IsCompanionInitialized = true;
-                        ShowHUDBigInfo($"Companion {AI.AIID.Regular} was created!");
+                        ShowHUDBigInfo($"Companion {AI.AIID.Spearman} was created!");
                     }
                 }
                 else
                 {
                     IsCompanionInitialized = false;
-                    ShowHUDBigInfo($"Error - could not initialize {AI.AIID.Regular}!");
+                    ShowHUDBigInfo($"Error - could not initialize {AI.AIID.Spearman}!");
                 }
             }
             catch (Exception exc)
@@ -430,13 +471,16 @@ namespace ModCompanion
         {
             LocalInstruction = LocalInstructionsManager.GetInstruction(NpcName);
             string url = LocalInstructionsManager.NpcInitUrl + NpcName;
-            UnityWebRequest www = UnityWebRequest.Post(url, JsonUtility.ToJson(LocalInstruction));
+            string postData = JsonUtility.ToJson(LocalInstruction);
+            UnityWebRequest www = UnityWebRequest.Post(url, postData);
             yield return www.SendWebRequest();
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                ModAPI.Log.Write(www.error);
+                string errorMsg = $"NPC not initialized!\nError for POST {url} with {postData}\n{www.error}";
+                ModAPI.Log.Write(errorMsg);
                 IsNpcInitialized = false;
+                ShowHUDBigInfo(errorMsg);
             }
             else
             {
@@ -453,8 +497,9 @@ namespace ModCompanion
 
             if (www.result != UnityWebRequest.Result.Success)
             {
-                ModAPI.Log.Write(www.error);
-                ShowHUDBigInfo(www.error);
+                string errorMsg = $"Could not ask any question!\nError for GET {url}\n{www.error}";
+                ModAPI.Log.Write(errorMsg);
+                ShowHUDBigInfo(errorMsg);
             }
             else
             {
@@ -465,8 +510,9 @@ namespace ModCompanion
                 }
                 else
                 {
-                    ModAPI.Log.Write(ErrorMessage);
-                    ShowHUDBigInfo(ErrorMessage);
+                    string errorMsg = $"NPC did not give any answer!\n{ErrorMessage}";
+                    ModAPI.Log.Write(errorMsg);
+                    ShowHUDBigInfo(errorMsg);
                 }
             }
         }
