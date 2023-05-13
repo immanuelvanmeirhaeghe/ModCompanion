@@ -476,8 +476,8 @@ namespace ModCompanion
             {
                 LocalInstruction = new Instruction
                 {
-                    FromSystem = LocalInstructionsManager.GetSystemInstructionsAsync(NpcName).Current,
-                    FromUser = LocalInstructionsManager.GetUserInstructionsAsync(NpcName).Current,
+                    FromSystem = LocalInstructionsManager.GetSystemInstructions(NpcName),
+                    FromUser = LocalInstructionsManager.GetUserInstructions(NpcName),
                 };
                 data = $"{nameof(Instruction.FromSystem)}: \"{LocalInstruction.FromSystem}\", {nameof(Instruction.FromUser)}: \"{LocalInstruction.FromUser}\" ";
                 postData = $"{{ {data} }}";

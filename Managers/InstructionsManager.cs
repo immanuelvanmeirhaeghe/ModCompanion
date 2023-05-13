@@ -20,6 +20,10 @@ namespace ModCompanion.Managers
         public readonly string NpcInstructionUrl = "https://localhost:7230/npc/instruction?npcName=";
         public readonly string NpcPromptUrl = "https://localhost:7230/npc/prompt?scribe=true&gpt=true&question=";
 
+
+        public string SystemInstructions { get; set; } = string.Empty;
+        public string UserInstructions { get; set; } = string.Empty;
+
         public InstructionsManager() 
         {
             Instance = this;
@@ -37,7 +41,7 @@ namespace ModCompanion.Managers
         /// <param name="gameDataPathParameter">placeholder for game data path</param>
         /// <param name="systemInstructionsFileName">Optional file with instructions</param>
         /// <returns>System instructions</returns>
-        public IEnumerator<string> GetSystemInstructionsAsync(
+        public string GetSystemInstructions(
                                                                     string npcName = null,
                                                                     string npcNameParameter = null,
                                                                     string gameDataPath = null,
@@ -50,8 +54,8 @@ namespace ModCompanion.Managers
             string pathParameter = gameDataPathParameter ?? InstructionsManagerHelpers.DefaultGameDataPathParameter;
             string fileName = systemInstructionsFileName ?? InstructionsManagerHelpers.DefaultSystemInstructionsFileName;
             string path = Path.Combine(InstructionsManagerHelpers.DefaultPath, dataPath, fileName);
-            string fromSystem = File.ReadAllText(path).Replace(pathParameter, dataPath).Replace(nameParameter, name);
-            yield return fromSystem;
+            SystemInstructions = File.ReadAllText(path).Replace(pathParameter, dataPath).Replace(nameParameter, name);
+            return SystemInstructions;
         }
 
         /// <summary>
@@ -64,7 +68,7 @@ namespace ModCompanion.Managers
         /// <param name="gameDataPathParameter">placeholder for game data path</param>
         /// <param name="systemInstructionsFileName">Optional file with instructions</param>
         /// <returns>User instructions</returns>
-        public IEnumerator<string> GetUserInstructionsAsync(
+        public string GetUserInstructions(
                                                  string npcName = null,
                                                  string npcNameParameter = null,
                                                  string gameDataPath = null,
@@ -76,8 +80,8 @@ namespace ModCompanion.Managers
             string dataPath = gameDataPath ?? InstructionsManagerHelpers.DefaultGameDataPath;
             string pathParameter = gameDataPathParameter ?? InstructionsManagerHelpers.DefaultGameDataPathParameter;
             string fileName = userInstructionsFileName ?? InstructionsManagerHelpers.DefaultUserInstructionsFileName;
-            string fromUser = File.ReadAllText(Path.Combine(InstructionsManagerHelpers.DefaultPath, dataPath, fileName)).Replace(pathParameter, dataPath).Replace(nameParameter, name);
-            yield return fromUser;
+            UserInstructions = File.ReadAllText(Path.Combine(InstructionsManagerHelpers.DefaultPath, dataPath, fileName)).Replace(pathParameter, dataPath).Replace(nameParameter, name);
+            return UserInstructions;
         }
 
         /// <summary>
@@ -92,13 +96,13 @@ namespace ModCompanion.Managers
                 string name = npcName ?? InstructionsManagerHelpers.DefaultNpcName;
                 StringBuilder instructionsBuilder = new StringBuilder();
 
-                IEnumerator<string> systemInstructions = GetSystemInstructionsAsync(name);
-                instructionsBuilder.AppendLine(systemInstructions.Current);
-                instruction.FromSystem = systemInstructions.Current;
+                string systemInstructions = GetSystemInstructions(name);
+                instructionsBuilder.AppendLine(systemInstructions);
+                instruction.FromSystem = systemInstructions;
 
-                IEnumerator<string> userInstructions = GetUserInstructionsAsync(name);
-                instructionsBuilder.AppendLine(userInstructions.Current);
-                instruction.FromUser = userInstructions.Current;
+                string userInstructions = GetUserInstructions(name);
+                instructionsBuilder.AppendLine(userInstructions);
+                instruction.FromUser = userInstructions;
 
                 return instruction;
             }
